@@ -1,16 +1,36 @@
 import { ApplicationConfig, provideBrowserGlobalErrorListeners, provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
-import { provideStore } from '@ngrx/store';
+import { ActionReducer, provideStore } from '@ngrx/store';
 import { provideEffects } from '@ngrx/effects';
 import { provideStoreDevtools } from '@ngrx/store-devtools';
 import { provideRouterStore, routerReducer } from '@ngrx/router-store';
 import { provideFirebaseApp, initializeApp} from '@angular/fire/app';
 import { provideAuth, getAuth } from '@angular/fire/auth';
 import { provideFirestore, getFirestore } from '@angular/fire/firestore';
+import { localStorageSync } from 'ngrx-store-localstorage';
+import { authReducer } from './store/auth/auth.reducer';
 
 
 import { routes } from './app.routes';
 import { environment } from './environments/environment';
+import { AuthEffects } from './store/auth/auth.effects';
+
+export function localStorageSyncReducer(reducer:ActionReducer<any>):ActionReducer<any>{
+
+  const wrapper = localStorageSync({
+    keys:['auth'],
+    rehydrate: true
+  })
+  const inner = wrapper(reducer);
+  return inner;
+  // return localStorageSync({
+  //   keys:['auth'],
+  //   rehydrate: true
+  // })(reducer);
+
+}
+
+const metaReducers = [localStorageSyncReducer];
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -18,9 +38,10 @@ export const appConfig: ApplicationConfig = {
     provideZonelessChangeDetection(),
     provideRouter(routes),
     provideStore({
-      router: routerReducer
-    }),
-    provideEffects([]),
+      router: routerReducer, 
+      auth: authReducer
+    },{metaReducers}),
+    provideEffects([AuthEffects]),
     provideStoreDevtools(),
     provideRouterStore(),
     provideFirebaseApp(()=>initializeApp(environment.firebase)),
